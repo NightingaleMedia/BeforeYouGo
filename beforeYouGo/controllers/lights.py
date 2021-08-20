@@ -26,15 +26,19 @@ class Lights():
         LED_CHANNEL    = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
         self.strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
         self.strip.begin()
-        self._BREATH_MAX = 255;
+        self._BREATH_MAX = 100;
         self._BREATH_MIN = 1
         self._breathing = False;
+        self._fading = False;
         self._fade_time = 0.2
 
     def init(self):
         self._breathing = True;
         self.breathe();
-
+    def get_fading(self):
+        return self._fading
+    def get_breathing(self):
+        return self._breathing;
     # """Wipe color across display a pixel at a time."""
     def colorWipe(self, color):
         for i in range(self.strip.numPixels()):
@@ -47,13 +51,17 @@ class Lights():
 
     @threaded
     def breathe(self):
+        while(self.get_fading()):
+            time.sleep(0.1)
+        print('breathing...')
         self._breathing = True;
         for i in range(self.strip.numPixels()):
            self.strip.setPixelColor(i, Color(255, 255, 255, 255))
         i = self._BREATH_MIN
         direction = "up"
         running = True
-        while running:
+        while self.get_breathing():
+  
             # if it is below 255 go up
             if(i < self._BREATH_MAX and direction == "up"):
                 i = i * 1.03
@@ -70,28 +78,38 @@ class Lights():
                 direction = "up"
             self.show(int(i))
             time.sleep(0.02)
-            if(not self._breathing):
-                running = False
+        print('breathing done...')
+
     @threaded
     def fadeWhite(self, desired_brightness = 255, fade_time = 0.1):
+        print('fade called...')
+        mode = "initial"
         self.clear()
+        self._fading = True;
         initial_brightness = self.strip.getBrightness();
-        self.show(initial_brightness)
-        if(initial_brightness > desired_brightness):
-            # Fade Down
-            print('fade down')
-            while desired_brightness <= self.strip.getBrightness():
-                initial_brightness -= 3;
-                self.show(initial_brightness)
-                time.sleep(fade_time)
-        
-        if(initial_brightness < desired_brightness):
-            #Fade Up
-            print('fade up')
-            while desired_brightness >= self.strip.getBrightness():
-                initial_brightness += 3;
-                self.show(initial_brightness)
-                time.sleep(fade_time)
+        while self.get_fading():
+            if initial_brightness > desired_brightness and mode == "initial":
+                # Fade Down
+                mode = "fade_down"
+                print(mode)
+                while desired_brightness <= self.strip.getBrightness():
+                    initial_brightness -= 3;
+                    self.show(initial_brightness)
+                    time.sleep(fade_time)
+            
+            if initial_brightness < desired_brightness and mode == "initial":
+                #Fade Up
+                mode = "fade_up"
+                print(mode)
+                while desired_brightness >= self.strip.getBrightness():
+                    initial_brightness += 3;
+                    self.show(initial_brightness)
+                    time.sleep(fade_time)
+            print('fade done...')
+            mode = "complete"
+            if (mode == "complete" or desired_brightness == self.strip.getBrightness()):
+                print(mode)
+                self._fading = False
 
     def fillWhite(self, brightness = 255):
         self.clear();
@@ -102,5 +120,6 @@ class Lights():
 
     def clear(self):
         self._breathing = False;
+        self._fading = False;
     # Main program logic follows:
 

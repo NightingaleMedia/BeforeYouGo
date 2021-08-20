@@ -4,6 +4,8 @@ from gpio_config  import keypad
 from controllers import mixer, lights
 from tabulate import tabulate
 from threading import Thread
+import logging
+
 
 
 def get_date():
@@ -32,7 +34,7 @@ class State:
             self.logState('handle pickup')
             self.listening = True
             self.mixer.handle_pickup()
-            self.lights.fillWhite()
+            self.lights.fillWhite(255)
             print('--------\nPICKUP\n--------')
 
     def handleHangup(self):  
@@ -56,11 +58,27 @@ class State:
          # if something if audio is not playing
         if(not self.mixer.get_voice_playing()):
             self.logState('handle play state')
-            self.lights.fadeWhite(10)
-            self.mixer.play_file(self.input, self.handlePickup)
+            self.lights.fadeWhite(10, 0.01)
+            self.mixer.play_file(self.input, self.handle_post_play)
         else:
             print('Audio is playing...')
-            
+    
+    def handle_post_play(self):
+        self.lights.fadeWhite(1, 0.1)
+        while self.lights.get_fading():
+            print('waiting for fade...')
+            time.sleep(0.1)
+        # see if phone is still picked up
+        time.sleep(1);
+        if self.listening:
+            print('callback pickup...')
+            self.handlePickup();
+        else:
+            # we have to trick hangup to believe that it was off the hook
+            print('callback hangup...')
+            self.listening = True
+            self.handleHangup()
+
     # executed when input is "#" 
     def handleCue(self):
         self.logState('handle cue')
@@ -96,7 +114,9 @@ class State:
         return print ("\n\n" + tabulate(data, headers=["State", "Value", "Time"]) + "\n\n")
         
     
-
+class Logger(logging):
+    def __init__(self, filename):
+        self.basicConfig(filename= filename + '.log', encoding='utf-8', level=logging.DEBUG)
 
 
 # polling

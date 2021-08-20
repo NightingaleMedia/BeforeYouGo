@@ -1,7 +1,7 @@
 import pygame
 import time
 from threading import Thread
-
+from runner import Logger
 def threaded(fn):
     def wrapper(*args, **kwargs):
         print('theading the func...')
@@ -43,6 +43,7 @@ class Mixer:
         self.mixer = pygame.mixer
         self.mixer.init()
 
+        self.logger = Logger("mixer")
         self.main_channel = self.mixer.Channel(0)
         self.main_channel.set_volume(0.2)
 
@@ -73,6 +74,12 @@ class Mixer:
         else:
             self.playing = False
         return(self.playing)
+    
+    def set_voice_playing(self, value):
+        if(value == False and self.voice_channel.get_busy()):
+            self.playing = False;
+        if(value == True and not self.voice_channel.get_busy()):
+            self.playing = True
 
     def handle_pickup(self):
         if(self.get_voice_playing()):
@@ -89,6 +96,7 @@ class Mixer:
     def play_file(self, number, callback = None):
       
         print('play file... %s' % number)
+        self.logger.log('Playing file: %s', number)
         # If something else is playing, stop it
         if(self.main_channel.get_busy()):
             self.stop_main()
