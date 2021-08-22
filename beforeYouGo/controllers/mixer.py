@@ -1,12 +1,7 @@
 import pygame
 import time
-from threading import Thread
 from runner import Logger
-def threaded(fn):
-    def wrapper(*args, **kwargs):
-        print('theading the func...')
-        Thread(target=fn, args=args, kwargs=kwargs).start()
-    return wrapper
+
 
 DIRECTORY = {
 "DIAL": "../data/dial_tone.wav",
@@ -19,6 +14,7 @@ DIRECTORY = {
 7 : '../data/track7.wav',
 8 : '../data/track8.wav',
 9 : '../data/track9.wav',
+# about the project track
 0 : '../data/track9.wav'
 
 }
