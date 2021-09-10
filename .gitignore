@@ -1,4 +1,6 @@
 data/*/*.wav
 
+!data/DTMF/*
+
 __assets_/*
 __assets__
