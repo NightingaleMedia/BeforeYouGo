@@ -1,26 +1,15 @@
 import pygame
 import time
-from runner import Logger
+import json
+import random
+import os
+# Opening JSON file
+f = open('../data/manifest.json')
+DIRECTORY = json.load(f)
 
-
-DIRECTORY = {
-"DIAL": "../data/dial_tone.wav",
-1 : '../data/track1.wav',
-2 : '../data/track2.wav',
-3 : '../data/track3.wav',
-4 : '../data/track4.wav',
-5 : '../data/track5.wav',
-6 : '../data/track6.wav',
-7 : '../data/track7.wav',
-8 : '../data/track8.wav',
-9 : '../data/track9.wav',
-# about the project track
-0 : '../data/track9.wav'
-
-}
 
 DIAL_KEYS = {
-    0: "../data/DTMF/DTMF-0.wav",
+    10: "../data/DTMF/DTMF-0.wav",
     1: "../data/DTMF/DTMF-1.wav",
     2: "../data/DTMF/DTMF-2.wav",
     3: "../data/DTMF/DTMF-3.wav",
@@ -39,30 +28,41 @@ class Mixer:
         self.mixer = pygame.mixer
         self.mixer.init()
 
-        self.logger = Logger("mixer")
         self.main_channel = self.mixer.Channel(0)
         self.main_channel.set_volume(0.2)
-
+    
         self.voice_channel = self.mixer.Channel(1)
-        self.voice_channel.set_volume(0.5)
+        self.voice_channel.set_volume(0.9)
         
         self.dial_channel = self.mixer.Channel(2)
-        self.dial_channel.set_volume(0.4)
-  
+        self.dial_channel.set_volume(0.2)
+        self.DIAL_TONE = None;
         self.audio_list = {}
         self.key_list = {}
-        self.currentFile = None
+        self.current_file = None
         self.playing = False
-     
+        self._loading = False
 
     def init(self):
         print('Initializing mixer...')
-        for file in DIRECTORY.keys():
-                self.audio_list[file] = self.mixer.Sound(DIRECTORY[file])
-                print("loading: %s" % file)
+        self.DIAL_TONE = self.mixer.Sound('../data/DTMF/dial_tone.wav')
         for file in DIAL_KEYS.keys():
-                self.key_list[file] = self.mixer.Sound(DIAL_KEYS[file])
-                print("loading: %s" % file)
+            self.key_list[file] = self.mixer.Sound(DIAL_KEYS[file])
+            print("loading dial tone: %s" % file)
+        # for item in DIRECTORY:
+        #     self.audio_list[item] = []
+        #     for file in DIRECTORY[item]['files']:
+        #         if(file == '.DS_Store'):
+        #             print('skip')
+        #         else:
+        #             path = str('../data/' + DIRECTORY[item]['name'] + "/" + file)
+        #             print('loading %s ...' % path)
+        #             audio_file = self.mixer.Sound(path)
+        #             self.audio_list[item].append(audio_file)
+
+
+    def get_loading(self):
+        return self._loading;
 
     def get_voice_playing(self):
         if(self.voice_channel.get_busy()):
@@ -81,26 +81,52 @@ class Mixer:
         if(self.get_voice_playing()):
             return
         else:
-            self.main_channel.play(self.audio_list['DIAL'], -1, fade_ms=100)
+            self.main_channel.play(self.DIAL_TONE, -1, fade_ms=100)
 
     def dial(self, number):
         if(not self.playing):
             self.dial_channel.play(self.key_list[number])
             time.sleep(0.25)
             self.dial_channel.stop()
-
+    
+    def load_file(self, path_to_file):
+            print('loading file: %s' % path_to_file)
+            self._loading = True;
+            self.current_file = self.mixer.Sound(path_to_file)
+            self._loading = False;
+             
     def play_file(self, number, callback = None):
-      
-        print('play file... %s' % number)
-        self.logger.log('Playing file: %s', number)
+        # get a random file from the list of files
+        category = number
+        if(category == 10):
+            category = "0"
+        print('category: %s' % category)
+        folderName = DIRECTORY[str(category)]['name'] 
+        print("folder name: "+ folderName)
+
+        folderFileArray = DIRECTORY[str(category)]['files']
+
+        randomNumber = random.randint(0, len(folderFileArray))
+
+        winnerFile =  '../data/' + folderName + '/' + str(folderFileArray[randomNumber])
+        
+        print("winner: " + winnerFile)
+
+        self.load_file(winnerFile)
+
+        while(self.get_loading()):
+            print('loading...')
+            time.sleep(0.2)
+
         # If something else is playing, stop it
         if(self.main_channel.get_busy()):
             self.stop_main()
+        
         # start the playing loop
+
         self.playing = True;
-        self.voice_channel.play(self.audio_list[number])   
+        self.voice_channel.play(self.current_file)   
         while(self.get_voice_playing()):
-            print('busy playing...')
             time.sleep(1)
         print('callback...')
         self.get_voice_playing()
@@ -113,3 +139,6 @@ class Mixer:
         self.main_channel.stop()
         self.voice_channel.stop()
         self.dial_channel.stop()
+    def kill(self):
+        self.stop();
+        self.mixer.quit();

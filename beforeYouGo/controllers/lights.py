@@ -16,7 +16,7 @@ class Lights():
     def __init__(self):
         print('Initializing lights...')
         # LED strip configuration:
-        LED_COUNT      = 144      # Number of LED pixels.
+        LED_COUNT      = 288      # Number of LED pixels.
         #LED_PIN        = 18      # GPIO pin connected to the pixels (18 uses PWM!).
         LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
         LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -26,8 +26,8 @@ class Lights():
         LED_CHANNEL    = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
         self.strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
         self.strip.begin()
-        self._BREATH_MAX = 100;
-        self._BREATH_MIN = 1
+        self._BREATH_MAX = 127;
+        self._BREATH_MIN = 30
         self._breathing = False;
         self._fading = False;
         self._fade_time = 0.2
@@ -59,12 +59,10 @@ class Lights():
            self.strip.setPixelColor(i, Color(255, 255, 255, 255))
         i = self._BREATH_MIN
         direction = "up"
-        running = True
         while self.get_breathing():
-  
             # if it is below 255 go up
             if(i < self._BREATH_MAX and direction == "up"):
-                i = i * 1.03
+                i = i * 1.01
                
             # if it at 255 go down
             if(i > self._BREATH_MAX or direction == "down"):
@@ -72,7 +70,7 @@ class Lights():
                 if(i > 255):
                     i = 255;
                 i = int(i)
-                i = i / 1.1
+                i = i / 1.01
               
             if(i < self._BREATH_MIN and direction == "down"):
                 direction = "up"
@@ -121,5 +119,9 @@ class Lights():
     def clear(self):
         self._breathing = False;
         self._fading = False;
+    
+    def kill(self):
+        self.clear();
+        self.show(0);
     # Main program logic follows:
 

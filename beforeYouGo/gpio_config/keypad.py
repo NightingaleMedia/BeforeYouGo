@@ -8,10 +8,10 @@ class Keypad():
         GPIO.setup(7, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         # CONSTANTS 
         self.KEYPAD = [
-            [1,2,3],
-            [4,5,6],
-            [7,8,9],
-            [12,"0",11]
+            [1,  2,  3],
+            [4,  5,  6],
+            [7,  8,  9],
+            [12, 10,11]
         ]
 
         # 26 = 37
@@ -32,8 +32,6 @@ class Keypad():
             return False
      
     def getKey(self):
-
-
         # Set all columns as output low
         for j in range(len(self.COLUMN)):
             GPIO.setup(self.COLUMN[j], GPIO.OUT)
@@ -97,7 +95,4 @@ if __name__ == '__main__':
     digit = None
     while True:
         digit = kp.getKey()
-        # Print the result
-        if(digit):
-            print(digit)
         time.sleep(0.2)

@@ -5,7 +5,7 @@ from controllers import mixer, lights
 from tabulate import tabulate
 from threading import Thread
 import logging
-
+import sys
 
 
 def get_date():
@@ -30,6 +30,7 @@ class State:
         self.lights.init()
 
     def handlePickup(self):
+        # If not already listening, prevent an infinite loop
         if(not self.listening):
             self.logState('handle pickup')
             self.listening = True
@@ -54,24 +55,27 @@ class State:
 
 
     def handle_play_state(self):        
-        self.listening = False;
          # if something if audio is not playing
         if(not self.mixer.get_voice_playing()):
             self.logState('handle play state')
-            self.lights.fadeWhite(10, 0.01)
+            self.lights.fadeWhite(128, 0.05)
+            self.listening = True;
             self.mixer.play_file(self.input, self.handle_post_play)
         else:
             print('Audio is playing...')
     
     def handle_post_play(self):
-        self.lights.fadeWhite(1, 0.1)
+        print('post play')
+        self.lights.fadeWhite(2, 0.01)
         while self.lights.get_fading():
             print('waiting for fade...')
             time.sleep(0.1)
         # see if phone is still picked up
-        time.sleep(1);
+        time.sleep(2);
         if self.listening:
             print('callback pickup...')
+             # we have to trick hangup to believe that it hung up real quick
+            self.listening = False
             self.handlePickup();
         else:
             # we have to trick hangup to believe that it was off the hook
@@ -82,7 +86,7 @@ class State:
     # executed when input is "#" 
     def handleCue(self):
         self.logState('handle cue')
-        if(range(10).__contains__(self.input) and self.listening):
+        if(range(11).__contains__(self.input) and self.listening):
             print('trying to play the audio %s...' % self.input)
             self.handle_play_state()
         else:
@@ -91,11 +95,11 @@ class State:
     def handleInput(self, input): 
         DIRECTORY = {
             11 : self.handleCue,
-            12 : self.handlePickup,
-            13 : self.handleHangup,
+            12 : None,
+            13 : None,
         }
 
-        if(input and range(10).__contains__(input)) :
+        if(input and range(11).__contains__(input)) :
             if(self.listening):
                 self.setInput(input)
             else:
@@ -112,33 +116,35 @@ class State:
                 ["Mixer Ply", self.mixer.playing,   ""],
                 ["__________",'__________',         "__________"]] 
         return print ("\n\n" + tabulate(data, headers=["State", "Value", "Time"]) + "\n\n")
+    def killall(self):
+        self.mixer.kill();
+        self.lights.kill();
         
     
-class Logger(logging):
-    def __init__(self, filename):
-        self.basicConfig(filename= filename + '.log', encoding='utf-8', level=logging.DEBUG)
-
-
 # polling
 def __main__():
     kp = keypad.Keypad();
-
     state = State()
     # main game loop
-    while True:
-        # game logic here based on the state object
-        if(kp.isTriggered()): # basically if the phone is up
-            state.handlePickup()
-            result = kp.getKey()
-            if(result):
-                print(result)
-                try:
-                    state.handleInput(int(result))
-                except:
-                    print('an error occured...' )
-            
-        else:
-            state.handleHangup()
-        time.sleep(0.02)
+    try:
+        while True:
+            # game logic here based on the state object
+            if(kp.isTriggered()): # basically if the phone is up
+                state.handlePickup()
+                result = kp.getKey()
+                if(result):
+                    print(result)
+                    try:
+                        state.handleInput(int(result))
+                    except:
+                        print('an error occured...' )
+                
+            else:
+                state.handleHangup()
+            time.sleep(0.02)
+    except KeyboardInterrupt:
+        print('QUIT')
+        state.killall();
+        sys.exit(0)
 
-__main__()
+__main__();
